@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LibrasAI — Assistente Otimizado</title>
+    <!-- Fonte Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <!-- MediaPipe Hands -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js"
+        crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"
+        crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="libras-header">
+            <h1>🤟 LibrasAI</h1>
+            <p>Aprenda com Inteligência Artificial em tempo real (Colab-Ready)</p>
+        </div>
+
+        <div class="dashboard">
+            <div class="metric-card">
+                <div class="metric-label">Status Websocket</div>
+                <div class="metric-value" id="ws-status">🔴 Desconectado</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Predições via IA</div>
+                <div class="metric-value accent-cyan" id="metric-total">0</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Mãos Detectadas</div>
+                <div class="metric-value accent-purple" id="metric-hands">Não</div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <!-- Coluna Principal: Câmera/Vídeo -->
+            <div class="video-section">
+                <!-- Seletor de Fonte -->
+                <div class="source-selector">
+                    <button id="btn-webcam" class="source-btn active">🎥 Webcam Ao Vivo</button>
+                    <button id="btn-video" class="source-btn">📁 Vídeo Gravado</button>
+                    <input type="file" id="video-upload" accept="video/mp4,video/webm,video/ogg" style="display: none;">
+                </div>
+
+                <!-- Câmera e Canvas -->
+                <div class="video-container">
+                <video id="input_video" class="input_video" autoplay playsinline></video>
+                <canvas id="output_canvas" class="output_canvas"></canvas>
+                <div class="status-overlay" id="status-overlay">Carregando MediaPipe...</div>
+            </div>
+            
+            <!-- Context Tracker (Optional view) -->
+            <div class="context-tracker">
+                <span class="context-label">Contexto atual:</span>
+                <span id="current-context-text" class="context-text">Nenhum sinal detectado ainda...</span>
+                <button id="btn-clear-context" class="btn-small" title="Limpar contexto">🗑️</button>
+            </div>
+        </div>
+
+        <!-- Painel de Resultados -->
+            <div class="results-panel">
+                <div class="sign-panel" id="sign-panel">
+                    <div class="sign-waiting">🤙 Aguardando sinal...</div>
+                    <div class="dica">Posicione sua mão enfrente a câmera</div>
+                </div>
+
+                <div class="chat-container" id="chat-container">
+                    <!-- Histórico de chat vai aqui -->
+                </div>
+
+                <!-- Input para conversar com a IA -->
+                <div class="chat-input-wrapper">
+                    <input type="text" id="ai-chat-input" placeholder="Pergunte à IA com base no contexto..." autocomplete="off">
+                    <button id="btn-send-message">Enviar</button>
+                </div>
+
+                <div class="loading-bar-container">
+                    <div class="loading-bar-fill" id="buffer-bar"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
