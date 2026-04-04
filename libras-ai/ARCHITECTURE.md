@@ -4,7 +4,7 @@ Este documento detalha o funcionamento e o fluxo de dados arquitetural do sistem
 
 O fluxo ilustra desde a captura da imagem do usuário até a tradução da linguagem de sinais e posterior interação com um agente de Inteligência Artificial usando o contexto estabelecido.
 
-## Fluxograma do Sistema
+## Fluxograma do Sistema 
 
 ```mermaid
 graph TD
