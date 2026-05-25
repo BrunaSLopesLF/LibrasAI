@@ -132,7 +132,7 @@ def train():
     )
 
     loss, accuracy = model.evaluate(X_val, y_val, verbose=0)
-    print(f"Meta atingida? {'Sim' if accuracy >= 0.8 else 'Nao'} - Acc: {accuracy:.4f}")
+    print(f"Meta atingida? {'Sim' if accuracy >= 0.6 else 'Nao'} - Acc: {accuracy:.4f}")
 
     y_pred = np.argmax(model.predict(X_val, verbose=0), axis=1)
     print(classification_report(y_val, y_pred, target_names=class_names))

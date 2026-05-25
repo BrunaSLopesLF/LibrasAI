@@ -12,48 +12,50 @@ from tensorflow.keras.layers import (
 )
 from tensorflow.keras.regularizers import l2
 
-class Attention(Layer):
+# ─── Alteração 1: Nova Camada de Atenção Customizada do Professor ──────────────
+class AttentionLayer(Layer):
     """
-    Camada de Attention customizada para focar nos frames mais relevantes da sequência.
-    Recebe um tensor 3D de shape (batch, steps, features) e retorna um 2D de shape (batch, features).
+    Camada de Attention customizada fornecida pelo orientador.
+    Calcula pesos de atenção locais e reduz a sequência temporal.
     """
     def __init__(self, **kwargs):
-        super(Attention, self).__init__(**kwargs)
+        super(AttentionLayer, self).__init__(**kwargs)
 
     def build(self, input_shape):
-        self.W = self.add_weight(shape=(input_shape[-1], 1),
-                                 initializer="normal",
-                                 trainable=True,
-                                 name="attention_weight")
-        super(Attention, self).build(input_shape)
+        self.W = self.add_weight(
+            shape=(input_shape[-1], 1),
+            initializer="random_normal",
+            trainable=True,
+            name="attention_weight"
+        )
+        super(AttentionLayer, self).build(input_shape)
 
-    def call(self, x):
-        # x.shape = (batch, steps, features)
-        # e.shape = (batch, steps, 1)
-        e = tf.tensordot(x, self.W, axes=1)
-        # Softmax over the steps
-        a = tf.nn.softmax(e, axis=1)
-        # output.shape = (batch, steps, features)
-        output = x * a
-        # shape = (batch, features)
-        return tf.reduce_sum(output, axis=1)
+    def call(self, inputs):
+        # Implementação matemática baseada em multiplicação de matrizes (matmul)
+        score = tf.matmul(inputs, self.W)
+        weights = tf.nn.softmax(score, axis=1)
+
+        context = weights * inputs
+        context = tf.reduce_sum(context, axis=1)
+        return context
         
     def get_config(self):
-        return super(Attention, self).get_config()
+        return super(AttentionLayer, self).get_config()
+
 
 def build_lstm_model(num_classes: int,
                      sequence_length: int = 30,
                      feature_size: int = 42,
                      dropout_rate: float = 0.3) -> Model:
     """
-    Constrói e retorna o modelo LSTM+Attention.
+    Constrói e retorna o modelo LSTM+Attention corrigido.
 
-    Arquitetura:
+    Arquitetura Atualizada:
         Input(30, 42)
         → LSTM(128, return_sequences=True) + Dropout
         → LSTM(64, return_sequences=True) + BatchNorm
-        → Attention()
-        → Dense(64, relu)
+        → AttentionLayer()  [Customizada pelo Professor]
+        → Dense(64, relu) + Dropout
         → Dense(num_classes, softmax)
     """
     inputs = Input(shape=(sequence_length, feature_size), name="input_frames")
@@ -68,8 +70,8 @@ def build_lstm_model(num_classes: int,
              recurrent_regularizer=l2(1e-4))(x)
     x = BatchNormalization()(x)
 
-    # Aplicação da atenção temporal
-    x = Attention()(x)
+    # ─── Alteração 2: Aplicação da Nova Atenção Customizada ───────────────────
+    x = AttentionLayer()(x)
 
     x = Dense(64, activation="relu", kernel_regularizer=l2(1e-4))(x)
     x = Dropout(dropout_rate)(x)

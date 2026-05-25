@@ -11,6 +11,9 @@ from typing import Optional, Tuple
 
 import tensorflow as tf
 
+# ─── Importar a nova camada customizada do professor ─────────────────────────
+from src.model.lstm_model import AttentionLayer
+
 # Suprimir logs do TensorFlow
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
@@ -50,28 +53,40 @@ class Predictor:
         self._load_model(model_path, metadata_path)
 
     def _load_model(self, model_path: str, metadata_path: str):
-        """Carrega modelo e metadados do disco."""
+        """Carrega modelo e injeta mapeamento de classes fixo."""
         if not os.path.exists(model_path):
             raise FileNotFoundError(
                 f"Modelo não encontrado: {model_path}\n"
                 "Execute o treinamento primeiro: python -m src.model.trainer"
             )
 
-        self.model = tf.keras.models.load_model(model_path)
+        # Injetando a AttentionLayer nos custom_objects do Keras
+        self.model = tf.keras.models.load_model(
+            model_path, 
+            custom_objects={'AttentionLayer': AttentionLayer}
+        )
 
+        # ─── CORREÇÃO CIRÚRGICA: Mapeamento Estático dos Sinais Oficiais ────────
+        # Forçamos a lista ordenada para garantir a sincronia com o LabelEncoder
+        self.class_names = [
+            "AJUDA", "APRENDER", "BOM_DIA", "EU", "LIBRAS", 
+            "NAO", "OBRIGADO", "OI", "SIM", "VOCE"
+        ]
+        
+        # Tenta ler o threshold do JSON se ele existir, caso contrário usa o padrão
         if os.path.exists(metadata_path):
-            with open(metadata_path, "r", encoding="utf-8") as f:
-                self.metadata = json.load(f)
-            self.class_names = self.metadata.get("class_names", [])
-            self.threshold = self.metadata.get("confidence_threshold", DEFAULT_THRESHOLD)
+            try:
+                with open(metadata_path, "r", encoding="utf-8") as f:
+                    self.metadata = json.load(f)
+                self.threshold = self.metadata.get("confidence_threshold", DEFAULT_THRESHOLD)
+            except Exception:
+                self.threshold = DEFAULT_THRESHOLD
         else:
-            # Tenta inferir classes da última camada do modelo
-            num_classes = self.model.output_shape[-1]
-            self.class_names = [f"SINAL_{i}" for i in range(num_classes)]
+            self.threshold = DEFAULT_THRESHOLD
 
-        print(f"[Predictor] Modelo carregado: {len(self.class_names)} classes")
-        print(f"[Predictor] Classes: {self.class_names}")
-        print(f"[Predictor] Threshold: {self.threshold:.0%}")
+        print(f"[Predictor] Modelo carregado com sucesso.")
+        print(f"[Predictor] Mapeamento de classes fixado: {self.class_names}")
+        print(f"[Predictor] Threshold ativo: {self.threshold:.0%}")
 
     def add_frame(self, landmarks: np.ndarray):
         """
@@ -97,13 +112,21 @@ class Predictor:
         if not self.is_ready():
             return None
 
-        sequence = np.expand_dims(np.array(self.buffer), axis=0)  # (1, 30, 126)
+        # Convertemos o buffer temporal para um array estruturado
+        buffer_array = np.array(self.buffer)  # Shape original: (30, 126)
+
+        # Slicing de dimensões (Foco nas 42 features da mão principal)
+        if buffer_array.shape[1] == 126:
+            buffer_array = buffer_array[:, :42]  # Reduz para shape: (30, 42)
+
+        sequence = np.expand_dims(buffer_array, axis=0)  # Shape final: (1, 30, 42)
         probabilities = self.model.predict(sequence, verbose=0)[0]
 
         class_idx = int(np.argmax(probabilities))
         confidence = float(probabilities[class_idx])
 
         if confidence >= self.threshold:
+            # Busca o nome real na nossa lista tratada
             sign_name = self.class_names[class_idx] if class_idx < len(self.class_names) else f"CLASSE_{class_idx}"
             return sign_name, confidence
 
@@ -122,7 +145,13 @@ class Predictor:
         if not self.is_ready():
             return []
 
-        sequence = np.expand_dims(np.array(self.buffer), axis=0)
+        buffer_array = np.array(self.buffer)
+
+        # Slicing preventivo também no fluxo de métricas secundárias
+        if buffer_array.shape[1] == 126:
+            buffer_array = buffer_array[:, :42]
+
+        sequence = np.expand_dims(buffer_array, axis=0)
         probabilities = self.model.predict(sequence, verbose=0)[0]
 
         top_n = np.argsort(probabilities)[::-1][:n]

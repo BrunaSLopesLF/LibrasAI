@@ -13,10 +13,12 @@ import os
 
 from collections import deque
 from src.dialog.intent_mapper import IntentMapper
+
 # Tentamos importar o modelo se existir
 try:
     from tensorflow.keras.models import load_model
-    from src.model.lstm_model import Attention
+    # ─── Alteração 1: Atualizado para importar a nova camada customizada do professor ───
+    from src.model.lstm_model import AttentionLayer
     import joblib
 except ImportError:
     pass
@@ -36,9 +38,10 @@ mapper = IntentMapper()
 
 if os.path.exists(MODEL_PATH) and os.path.exists(LABEL_ENCODER_PATH):
     try:
-        model = load_model(MODEL_PATH, custom_objects={'Attention': Attention})
+        # ─── Alteração 2: Injetando a 'AttentionLayer' no mapeamento customizado do Keras ───
+        model = load_model(MODEL_PATH, custom_objects={'AttentionLayer': AttentionLayer})
         le = joblib.load(LABEL_ENCODER_PATH)
-        print("✅ Modelo LSTM+Attention e LabelEncoder carregados com sucesso.")
+        print("✅ Modelo LSTM+AttentionLayer e LabelEncoder carregados com sucesso.")
     except Exception as e:
         print(f"⚠️ Erro ao carregar modelo (continuará rodando sem predição): {e}")
 
